@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+    <head> 
+	<meta http-equiv="Content-Type" content="text/html" charset="utf-8" />
+
+	<title>Pikachu with TF.js</title>
+
+    </head>
+	<script src="https://unpkg.com/@tensorflow/tfjs-core@3.7.0/dist/tf-core.js"></script>
+
+	<script src="https://unpkg.com/@tensorflow/tfjs-backend-webgl@3.7.0/dist/tf-backend-webgl.js"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection@2.0.0/dist/hand-pose-detection.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.min.js"></script>
+	<style>
+        * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+
+  body {
+  background-image: url('https://i.pinimg.com/736x/2b/3b/04/2b3b04771ccca26c3dd96d781b0117ca.jpg'); /* Replace with your image URL */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+
+    .container {
+      margin: 20px auto;
+      display: flex;
+	  flex-direction: column;
+    }
+
+    .video,
+    .debug {
+      padding: 0 20px;
+    }
+	#pose-video {
+      transform: scaleX(-1);
+    }
+	#video-container {
+      width: 160px;
+      height: 90px;
+      position: relative;
+    }
+	#image {
+		position: absolute;
+        bottom: 0;
+        left: 0px;
+        width:150px;
+        height:auto;
+   
+
+
+	}
+    
+    #pikachu-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none; /* Ensures interaction with elements behind */
+  z-index: 1; /* Keeps Pikachu above the background */
+}
+
+
+	</style>
+
+      <body>
+        <div class="container">
+            <div class="video">
+                <div id="video-container">
+                    <video id="pose-video" playsinline>
+
+                    </video>
+                </div>
+                <div id="pikachu-cage">
+                     <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/8d6cfe44-5fe9-4aaf-9cde-700622aa927d/dccwm24-630b8838-739d-419f-9c32-68bf84d971ab.gif?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzhkNmNmZTQ0LTVmZTktNGFhZi05Y2RlLTcwMDYyMmFhOTI3ZFwvZGNjd20yNC02MzBiODgzOC03MzlkLTQxOWYtOWMzMi02OGJmODRkOTcxYWIuZ2lmIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.1mZ-5Fqcrt4-7f3p5jwNBvyoZpVX9aDtUTQKlollHNU" id="image"
+                           alt="Pikachu Running" width="250"/>
+
+                </div>       
+            </div>
+            
+        </div>
+        
+         <script>
+            const pikachu =document.getElementById('image')
+            const cssStyle= window.getComputedStyle(pikachu)
+            const config={
+           video:
+           {
+              width: 160,
+              height: 90,
+              fps: 30
+
+           }
+        }
+        
+        async function createDetector()
+        {
+            return window.handPoseDetection.createDetector
+            (window.handPoseDetection.SupportedModels.MediaPipeHands,
+                {
+                    runtime: 'mediapipe',
+                    model: 'lite',
+                    maxHands: 1,
+                    solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915',
+
+
+                }
+            )
+        }
+
+        async function main() 
+        {
+            const video = document.querySelector('#pose-video')
+            const detector = await createDetector();
+            console.log('ML mode loaded')
+            const detectHand = async () => {
+            const hands= await detector.estimateHands( video,{flipHorizontal: true})
+            console.log(hands)
+            const prevPos=cssStyle.getPropertyValue('left') 
+            
+             for (const hand of hands)
+             {
+                 const currentLeft=parseFloat(window.getComputedStyle(pikachu).getPropertyValue('left')) || 0;
+                const{score,handedness}=hand
+                if(score>0.86 && handedness==='Right')
+             {
+                pikachu.style.left= `${currentLeft + 6}px`
+                console.log("Move Right!")
+             }
+             else if(score>0.86 && handedness==='Left')
+             {
+                pikachu.style.left= `${currentLeft - 6}px`
+                console.log("Move Left!")
+             }
+        
+            }
+             setTimeout(() =>
+             {
+                  detectHand()
+             },1000/config.video.fps) 
+             
+         }
+          detectHand();
+
+            
+        }
+        async function initVideo(width,height,fps)
+        {
+            const constraints =   //preparing what kind of video you want
+            {
+                audio: false,
+                video: 
+                {
+                    facingMode: 'user',
+                    width,
+                    height,
+                    frameRate: {max:fps}
+                }
+            }
+            const video = document.querySelector("#pose-video")//link the video element in the webpage
+            video.width =width
+            video.height= height;
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints) //request the video to stream in the browser and we wait since it's an asynchronous function
+
+            video.srcObject = stream; //the live camera field is set as the source for the video element
+
+            return new Promise(resolve =>{// basically it's waiting for additional metadata after the camera has been connected
+                video.onloadedmetadata = () => {
+                    resolve(video)
+                }
+            }
+
+            )
+        }
+        window.addEventListener('DOMContentLoaded',() =>{
+
+            console.log('DOM Loaded')
+            initVideo(config.video.width,config.video.height,config.video.fps).then(video =>{
+                video.play()
+                video.addEventListener('loadeddata',event=> {
+
+                    console.log('Camera is up and running')
+                    main()
+                })
+            })
+
+        }
+    )
+        </script>
+
+      </body>
+    </html>
+
+
+
